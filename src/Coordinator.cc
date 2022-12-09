@@ -33,8 +33,15 @@ void Coordinator::initialize()
     string startingNode = "out";
     startingNode += input[0];
     string startTime = input.substr(2);
-    cMessage * msg = new cMessage(startTime.c_str());
-    send(msg,startingNode.c_str());
+    cMessage * msg0 = new cMessage("-1");
+    cMessage * msg1 = new cMessage(startTime.c_str());
+    if(input[0]=='0')
+    {
+        msg0->setName(startTime.c_str());
+        msg1->setName("-1");
+    }
+    send(msg0,"out0");
+    send(msg1,"out1");
 }
 
 void Coordinator::handleMessage(cMessage *msg)

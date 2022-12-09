@@ -32,6 +32,8 @@ class Node : public cSimpleModule
     std::string msgbuffer[100];
     std::string prefixbuffer[100];
     int imSender;
+    int isInit;
+    int bufferSize;
     virtual int readMessages(string filepath);
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);

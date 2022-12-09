@@ -36,27 +36,40 @@ void Node::initialize()
 {
     // TODO - Generated method body
     imSender = 0;
+    isInit = 1;
 }
 
 void Node::handleMessage(cMessage *msg)
 {
     // TODO - Generated method body
-    cGate* port = msg->getArrivalGate();
-    if(string(port->getName())=="inCoord")
+    if(string(msg->getName())=="-1")
+    {
+        isInit = 0;
+        return;
+    }
+    if(isInit)
     {
         imSender = 1;
+        isInit = 0;
         string filepath = "../texts/inputx.txt";
         char index = par("Index").stringValue()[0];
         filepath[14] = index;
-        cout<<filepath<<endl;
-        int i = readMessages(filepath);
-        for(int j = 0; j < i; j++)
-        {
-            cout<<msgbuffer[j]<<endl;
-        }
+//        cout<<filepath<<endl;
+        bufferSize = readMessages(filepath);
+//        for(int j = 0; j < i; j++)
+//        {
+//            cout<<msgbuffer[j]<<endl;
+//        }
+        int startTime = atoi(msg->getName());
+        msg->setName("Goooo!!!");
+        scheduleAt(simTime()+startTime, msg);
     }
     else
     {
         //Sending and Receiving Logic
+        if(imSender)
+        {
+            send(msg,"outNode");
+        }
     }
 }
