@@ -23,6 +23,7 @@ string Coordinator::readInput(string filepath)
     string line;
     file.open(filepath,ifstream::in);
     getline(file,line);
+    file.close();
     return line;
 }
 

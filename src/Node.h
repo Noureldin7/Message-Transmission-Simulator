@@ -19,7 +19,8 @@
 #include <omnetpp.h>
 #include <string>
 #include <iostream>
-#include <fstream>
+
+#include "SenderWindow.h"
 using namespace omnetpp;
 using std::string;
 
@@ -28,13 +29,13 @@ using std::string;
  */
 class Node : public cSimpleModule
 {
+  public:
+    SenderWindow * senderWindow;
+    ~Node();
   protected:
-    std::string msgbuffer[100];
-    std::string prefixbuffer[100];
     int imSender;
     int isInit;
-    int bufferSize;
-    virtual int readMessages(string filepath);
+//    virtual int readMessages(string filepath);
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
 };

@@ -20,21 +20,22 @@
 using namespace std;
 Define_Module(Node);
 
-int Node::readMessages(string filepath)
-{
-    // TODO - Generated method body
-    ifstream file;
-    string line;
-    int i = 0;
-    file.open(filepath,ifstream::in);
-    while(getline(file,line))
-    {
-        prefixbuffer[i] = line.substr(0, 4);
-        msgbuffer[i] = line.substr(5);
-        i++;
-    }
-    return i;
-}
+//int Node::readMessages(string filepath)
+//{
+//    // TODO - Generated method body
+//    ifstream file;
+//    string line;
+//    int i = 0;
+//    file.open(filepath,ifstream::in);
+//    while(getline(file,line))
+//    {
+//        prefixbuffer[i] = line.substr(0, 4);
+//        msgbuffer[i] = line.substr(5);
+//        i++;
+//    }
+//    file.close();
+//    return i;
+//}
 void Node::initialize()
 {
     // TODO - Generated method body
@@ -57,15 +58,11 @@ void Node::handleMessage(cMessage *msg)
         string filepath = "../texts/inputx.txt";
         char index = par("Index").stringValue()[0];
         filepath[14] = index;
-//        cout<<filepath<<endl;
-        bufferSize = readMessages(filepath);
-//        for(int j = 0; j < i; j++)
-//        {
-//            cout<<msgbuffer[j]<<endl;
-//        }
+        senderWindow = new SenderWindow(getParentModule()->par("WS").intValue(),filepath);
+//        senderWindow.init(getParentModule()->par("WS").intValue(),filepath);
         int startTime = atoi(msg->getName());
-        msg->setName("Goooo!!!");
-        scheduleAt(simTime()+startTime, msg);
+        cMessage * mssg = new cMessage();
+        scheduleAt(simTime()+startTime, mssg);
     }
     else
     {
@@ -95,4 +92,15 @@ void Node::handleMessage(cMessage *msg)
             send(message, "outNode");
         }
     }
+}
+
+
+
+Node::~Node() {
+    cout<<"Destructor Node"<<endl;
+    if(senderWindow)
+    {
+        delete senderWindow;
+    }
+    cout<<"Destructor Node end"<<endl;
 }

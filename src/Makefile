@@ -1,12 +1,12 @@
 #
-# OMNeT++/OMNEST Makefile for NetworksProject
+# OMNeT++/OMNEST Makefile for Project
 #
 # This file was generated with the command:
 #  opp_makemake -f --deep
 #
 
 # Name of target to be created (-o option)
-TARGET = NetworksProject$(D)$(EXE_SUFFIX)
+TARGET = Project$(D)$(EXE_SUFFIX)
 TARGET_DIR = .
 
 # User interface (uncomment one) (-u option)
@@ -30,7 +30,7 @@ PROJECTRELATIVE_PATH = src
 O = $(PROJECT_OUTPUT_DIR)/$(CONFIGNAME)/$(PROJECTRELATIVE_PATH)
 
 # Object files for local .cc, .msg and .sm files
-OBJS = $O/Coordinator.o $O/Node.o $O/DataMessage_m.o
+OBJS = $O/Coordinator.o $O/Node.o $O/SenderWindow.o $O/DataMessage_m.o
 
 # Message files
 MSGFILES = \
