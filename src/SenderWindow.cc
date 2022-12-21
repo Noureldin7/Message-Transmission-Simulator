@@ -19,30 +19,32 @@ SenderWindow::SenderWindow(int WS, string filepath) {
     {
         if(!getline(file,line))
         {
-            break;
+            messages[i] = NULL;
+            continue;
         }
-        messages[i] = new DataMessage(line.c_str(), 0);
+        messages[i] = new DataMessage(upperEdge++,line.c_str());
     }
 }
 
-void SenderWindow::init(int WS,string filepath)
-{
-    lowerEdge = 0;
-    upperEdge = 0;
-    toBeSent = 0;
-    MAX_SEQ = WS + 1;
-    messages = new DataMessage * [WS + 1];
-    file.open(filepath,ifstream::in);
-    string line;
-    for (int i = 0; i <= WS; i++)
-    {
-        if(!getline(file,line))
-        {
-            break;
-        }
-        messages[i] = new DataMessage(line.c_str(), 0);
-    }
-}
+//void SenderWindow::init(int WS,string filepath)
+//{
+//    lowerEdge = 0;
+//    upperEdge = 0;
+//    toBeSent = 0;
+//    MAX_SEQ = WS + 1;
+//    messages = new DataMessage * [WS + 1];
+//    file.open(filepath,ifstream::in);
+//    string line;
+//    for (int i = 0; i <= WS; i++)
+//    {
+//        if(!getline(file,line))
+//        {
+//            messages[i] = NULL;
+//            continue;
+//        }
+//        messages[i] = new DataMessage(line.c_str(), 0);
+//    }
+//}
 
 DataMessage * SenderWindow::getMsg(int seqNum)
 {
@@ -69,22 +71,25 @@ void SenderWindow::moveLowerEdge(DataMessage * msg)
     {
         if(msg->getSeqNum()==lowerEdge)
         {
+            delete messages[lowerEdge];
             messages[lowerEdge]=NULL;
             lowerEdge = (lowerEdge + 1) % MAX_SEQ;
+            string line;
+            if(getline(file,line))
+            {
+                messages[upperEdge] = new DataMessage(upperEdge,line.c_str()); //tbc
+                upperEdge = (upperEdge + 1) % MAX_SEQ;
+            }
         }
-        //Auto Extend If Possible
     }
 }
 
 void SenderWindow::advanceSendingPointer()
 {
+    toBeSent = (toBeSent + 1) % MAX_SEQ;
     if(toBeSent==upperEdge)
     {
         toBeSent = lowerEdge;
-    }
-    else
-    {
-        toBeSent = (toBeSent + 1) % MAX_SEQ;
     }
 }
 
@@ -101,6 +106,7 @@ SenderWindow::~SenderWindow() {
             delete messages[i];
         }
     }
+    delete[] messages;
     cout<<"Destructor end"<<endl;
 }
 

@@ -16,7 +16,7 @@ using namespace omnetpp;
 using std::ifstream;
 using std::cout;
 
-class SenderWindow : public cSimpleModule {
+class SenderWindow {
 private:
     int MAX_SEQ;
     int lowerEdge;

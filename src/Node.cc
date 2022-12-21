@@ -49,9 +49,9 @@ void Node::handleMessage(cMessage *msg)
     if(string(msg->getName())=="-1")
     {
         isInit = 0;
-        return;
+        senderWindow = NULL;
     }
-    if(isInit)
+    else if(isInit)
     {
         imSender = 1;
         isInit = 0;
@@ -59,7 +59,6 @@ void Node::handleMessage(cMessage *msg)
         char index = par("Index").stringValue()[0];
         filepath[14] = index;
         senderWindow = new SenderWindow(getParentModule()->par("WS").intValue(),filepath);
-//        senderWindow.init(getParentModule()->par("WS").intValue(),filepath);
         int startTime = atoi(msg->getName());
         cMessage * mssg = new cMessage();
         scheduleAt(simTime()+startTime, mssg);
@@ -69,29 +68,46 @@ void Node::handleMessage(cMessage *msg)
         //Sending and Receiving Logic
         if(imSender)
         {
-            if (!dynamic_cast<DataMessage*>(msg)){
-            DataMessage* message = new DataMessage(69, string("A$/"));
-            cout<<"Message after framing: " << message->getPayloadWithFraming()<<endl;
-            cout<<"Message without framing: " << message->getPayload()<<endl;
-            cout<<"Message SequenceNumber: " << message->getSeqNum()<<endl;
-            cout<<"Message frame type: " << message->getFrameType()<<endl;
-            cout<<"Message is Valid? : " << message->isValid()<<endl;
-            message->setPayload(char(message->getPayloadWithFraming()[0] ^ char(16)) + message->getPayloadWithFraming().substr(1));
-            send(message,"outNode");
+            DataMessage * message;
+            if(!msg->isSelfMessage())
+            {
+                message = check_and_cast<DataMessage*>(msg);
             }
-            cancelAndDelete(msg);
+            int seq = senderWindow->nextSeqNumToSend();
+            if(seq!=-1)
+            {
+                message = new DataMessage(*(senderWindow->getMsg(seq)));
+                message->setPayload(char(message->getPayloadWithFraming()[0] ^ char(16)) + message->getPayloadWithFraming().substr(1));
+                cout<<"Message without framing: " << message->getPayload()<<endl;
+                send(message,"outNode");
+                senderWindow->advanceSendingPointer();
+            }
+//              DataMessage* message = new DataMessage(69, string("A$/"));
+//              cout<<"Message after framing: " << message->getPayloadWithFraming()<<endl;
+//              cout<<"Message SequenceNumber: " << message->getSeqNum()<<endl;
+//              cout<<"Message frame type: " << message->getFrameType()<<endl;
+//              cout<<"Message is Valid? : " << message->isValid()<<endl;
         }
         else{
-            DataMessage* message = check_and_cast<DataMessage*>(msg);
+            DataMessage * message = check_and_cast<DataMessage*>(msg);
             cout<<"Message after framing with error: " << message->getPayloadWithFraming()<<endl;
             cout<<"Message is Valid? after error in bit 0: " << message->isValid()<<endl;
-            message = new DataMessage(message->getSeqNum(), 2);
+            if(message->isValid()==-1)
+            {
+                message = new DataMessage(message->getSeqNum(),"Ack");
+                message->setFrameType(1);
+            }
+            else
+            {
+                message = new DataMessage(message->getSeqNum(),"Nack");
+                message->setFrameType(2);
+            }
             cout << "Response Frame Type: "<< message->getFrameType()<<endl;
             cout << "Response Sequence Number: "<< message->getSeqNum()<<endl;
-            cancelAndDelete(msg);
             send(message, "outNode");
         }
     }
+    cancelAndDelete(msg);
 }
 
 
