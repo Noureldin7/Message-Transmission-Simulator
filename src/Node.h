@@ -27,6 +27,10 @@ using std::string;
 /**
  * TODO - Generated class
  */
+enum TimerType{
+    timeout = 1,
+    processTime = 2
+};
 class Node : public cSimpleModule
 {
   public:
@@ -35,7 +39,14 @@ class Node : public cSimpleModule
   protected:
     int imSender;
     int isInit;
-//    virtual int readMessages(string filepath);
+    int WS;
+    double TO;
+    double PT;
+    double TD;
+    double ED;
+    double DD;
+    double LP;
+    cMessage ** timers;  // kind = 1 for timeout timer 2 for processing time
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
 };

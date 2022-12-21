@@ -20,27 +20,18 @@
 using namespace std;
 Define_Module(Node);
 
-//int Node::readMessages(string filepath)
-//{
-//    // TODO - Generated method body
-//    ifstream file;
-//    string line;
-//    int i = 0;
-//    file.open(filepath,ifstream::in);
-//    while(getline(file,line))
-//    {
-//        prefixbuffer[i] = line.substr(0, 4);
-//        msgbuffer[i] = line.substr(5);
-//        i++;
-//    }
-//    file.close();
-//    return i;
-//}
 void Node::initialize()
 {
     // TODO - Generated method body
     imSender = 0;
     isInit = 1;
+    WS = getParentModule()->par("WS").intValue();
+    TO = getParentModule()->par("TO").doubleValue();
+    PT = getParentModule()->par("PT").doubleValue();
+    TD = getParentModule()->par("TD").doubleValue();
+    ED = getParentModule()->par("ED").doubleValue();
+    DD = getParentModule()->par("DD").doubleValue();
+    LP = getParentModule()->par("LP").doubleValue();
 }
 
 void Node::handleMessage(cMessage *msg)
@@ -50,18 +41,30 @@ void Node::handleMessage(cMessage *msg)
     {
         isInit = 0;
         senderWindow = NULL;
+        timers = NULL;
+        cancelAndDelete(msg);
     }
     else if(isInit)
     {
         imSender = 1;
         isInit = 0;
+
         string filepath = "../texts/inputx.txt";
         char index = par("Index").stringValue()[0];
         filepath[14] = index;
-        senderWindow = new SenderWindow(getParentModule()->par("WS").intValue(),filepath);
+
+        senderWindow = new SenderWindow(WS,filepath);
+        timers = new cMessage*[WS + 1];
+        for (int i = 0; i <= WS; ++i)
+        {
+
+            timers[i] = new cMessage(to_string(i).c_str(),timeout);
+        }
+
         int startTime = atoi(msg->getName());
-        cMessage * mssg = new cMessage();
+        cMessage * mssg = new cMessage("",timeout);
         scheduleAt(simTime()+startTime, mssg);
+        cancelAndDelete(msg);
     }
     else
     {
@@ -73,44 +76,112 @@ void Node::handleMessage(cMessage *msg)
             {
                 message = check_and_cast<DataMessage*>(msg);
                 senderWindow->moveLowerEdge(message);
+                cout<<"done"<<endl;
+//                int seq = message->getSeqNum();
+//                if(timers[seq]->isScheduled())
+//                {
+//                    cancelEvent(timers[seq]);
+//                }
+                cancelAndDelete(msg);
             }
-//            else
+            else
             {
+                //if prefix loss => NoscheduleAt__NoSend__NoAdvance
+                //if prefix dup => scheduleAt+dupDelay__Send__NoAdvance
+                //if prefix delay => scheduleAt+delay__NoSend__NoAdvance
+                //if prefix mod => AddMod__scheduleAt__Send__Advance
+//                if(seq==-1)
+//                {
+//                    cancelAndDelete(msg);
+//                    return;
+//                }
+
+                if(msg->getKind()==processTime)
+                {
+                    int seq = senderWindow->nextSeqNumToSend();
+                    message = senderWindow->getMsg(seq);
+                    cout<<seq<<endl;
+                    int prefix = message->getKind();
+                    bool delay = prefix & 0b0001;
+                    bool dup = prefix & 0b0010;
+                    bool loss = prefix & 0b0100;
+                    bool mod = prefix & 0b1000;
+                    double delayValue = TD;
+                    if(!loss)
+                    {
+                        if(delay)
+                        {
+                            delayValue+=ED;
+                        }
+//                        cout<<msg->getName()<<"===========";
+                        if(msg->getName()[0]!='\0')
+                        {
+                            message = senderWindow->getMsg(atoi(msg->getName()));
+                        }
+                        message = new DataMessage(*message);
+                        if(mod)
+                        {
+                            string temp = message->getPayloadWithFraming();
+                            temp[1] = char(temp[1]^4);
+                            message->setPayload(temp);
+                        }
+                        sendDelayed(message,delayValue,"outNode");
+                    }
+                    if(msg->getName()[0]=='\0')
+                    {
+                        senderWindow->advanceSendingPointer();
+                    }
+                    // Log 2
+                    if(msg->getName()[0]!='\0')
+                    {
+                        cancelAndDelete(msg);
+                        return;
+                    }
+                    cancelAndDelete(msg);
+                }
+
+
                 int seq = senderWindow->nextSeqNumToSend();
                 if(seq!=-1)
                 {
-                    message = new DataMessage(*(senderWindow->getMsg(seq)));
-                    message->setPayload(char(message->getPayloadWithFraming()[0] ^ char(16)) + message->getPayloadWithFraming().substr(1));
-                    cout<<"Message without framing: " << message->getPayload()<<endl;
-                    send(message,"outNode");
-                    senderWindow->advanceSendingPointer();
+                    // Log 3 with if condition
+                    message = senderWindow->getMsg(seq);
+                    int prefix = message->getKind();
+                    bool dup = prefix & 0b0010;
+                    if(dup)
+                    {
+                        scheduleAt(simTime() + PT + DD, new cMessage(to_string(seq).c_str(),processTime));
+                    }
+                    scheduleAt(simTime() + PT, new cMessage("",processTime));
+                    // Log 1
+//                    if(timers[seq]->isScheduled())
+//                    {
+//                        cancelEvent(timers[seq]);
+//                    }
+//                    scheduleAt(simTime() + TO, timers[seq]);
                 }
-    //              DataMessage* message = new DataMessage(69, string("A$/"));
-    //              cout<<"Message after framing: " << message->getPayloadWithFraming()<<endl;
-    //              cout<<"Message SequenceNumber: " << message->getSeqNum()<<endl;
-    //              cout<<"Message frame type: " << message->getFrameType()<<endl;
-    //              cout<<"Message is Valid? : " << message->isValid()<<endl;
             }
         }
         else
         {
             DataMessage * message = check_and_cast<DataMessage*>(msg);
-            cout<<"Message after framing with error: " << message->getPayloadWithFraming()<<endl;
-            cout<<"Message is Valid? after error in bit 0: " << message->isValid()<<endl;
+//            cout<<"Message after framing with error: " << message->getPayloadWithFraming()<<endl;
+//            cout<<"Message is Valid? after error in bit 0: " << message->isValid()<<endl;
             if(message->isValid()==-1)
             {
                 message = new DataMessage(message->getSeqNum(),FrameType::Ack);
             }
             else
             {
-                message = new DataMessage(message->getSeqNum(),FrameType::Ack);//nack here
+                message = new DataMessage(message->getSeqNum(),FrameType::Nack);//nack here
             }
-            cout << "Response Frame Type: "<< message->getFrameType()<<endl;
-            cout << "Response Sequence Number: "<< message->getSeqNum()<<endl;
+//            cout << "Response Frame Type: "<< message->getFrameType()<<endl;
+//            cout << "Response Sequence Number: "<< message->getSeqNum()<<endl;
             send(message, "outNode");
+            // Log 4
+            cancelAndDelete(msg);
         }
     }
-    cancelAndDelete(msg);
 }
 
 
@@ -118,6 +189,11 @@ void Node::handleMessage(cMessage *msg)
 Node::~Node() {
     if(senderWindow)
     {
+        for (int i = 0; i <= WS; ++i)
+        {
+            cancelAndDelete(timers[i]);
+        }
+        delete[] timers;
         delete senderWindow;
     }
 }

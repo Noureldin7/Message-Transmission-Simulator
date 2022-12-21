@@ -49,6 +49,10 @@ SenderWindow::SenderWindow(int WS, string filepath) {
 
 DataMessage * SenderWindow::getMsg(int seqNum)
 {
+    if(seqNum==-1)
+    {
+        return NULL;
+    }
     return messages[seqNum];
 }
 
@@ -59,11 +63,11 @@ void SenderWindow::setSendingPointer(int seqNum)
 
 int SenderWindow::nextSeqNumToSend()
 {
-    if(lowerEdge == upperEdge)
+    if(lowerEdge == upperEdge) // Check
     {
         return -1;
     }
-    return toBeSent;
+    return toBeSent==upperEdge?-1:toBeSent;
 }
 
 void SenderWindow::moveLowerEdge(DataMessage * msg)
@@ -87,10 +91,14 @@ void SenderWindow::moveLowerEdge(DataMessage * msg)
 
 void SenderWindow::advanceSendingPointer()
 {
-    toBeSent = (toBeSent + 1) % (MAX_SEQ + 1);
-    if(toBeSent==upperEdge)
+//    if(toBeSent==upperEdge)
+//    {
+//        toBeSent = lowerEdge;
+//        toBeSent = lowerEdge;
+//    }
+    if(toBeSent!=upperEdge)
     {
-        toBeSent = lowerEdge;
+        toBeSent = (toBeSent + 1) % (MAX_SEQ + 1);
     }
 }
 
