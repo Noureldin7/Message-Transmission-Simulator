@@ -12,7 +12,7 @@ SenderWindow::SenderWindow(int WS, string filepath) {
     upperEdge = 0;
     toBeSent = 0;
     MAX_SEQ = WS + 1;
-    messages = new DataMessage * [WS + 1];
+    messages = new DataMessage * [MAX_SEQ];
     file.open(filepath,ifstream::in);
     string line;
     for (int i = 0; i <= WS; i++)
@@ -24,6 +24,7 @@ SenderWindow::SenderWindow(int WS, string filepath) {
         }
         messages[i] = new DataMessage(upperEdge++,line.c_str());
     }
+    //messages[MAX_SEQ] = NULL;
 }
 
 //void SenderWindow::init(int WS,string filepath)
@@ -67,18 +68,18 @@ int SenderWindow::nextSeqNumToSend()
 
 void SenderWindow::moveLowerEdge(DataMessage * msg)
 {
-    if(msg->getFrameType()==1)
+    if(msg->getFrameType()==FrameType::Ack)
     {
         if(msg->getSeqNum()==lowerEdge)
         {
             delete messages[lowerEdge];
             messages[lowerEdge]=NULL;
-            lowerEdge = (lowerEdge + 1) % MAX_SEQ;
+            lowerEdge = (lowerEdge + 1) % (MAX_SEQ + 1);
             string line;
             if(getline(file,line))
             {
                 messages[upperEdge] = new DataMessage(upperEdge,line.c_str()); //tbc
-                upperEdge = (upperEdge + 1) % MAX_SEQ;
+                upperEdge = (upperEdge + 1) % (MAX_SEQ + 1);
             }
         }
     }
@@ -86,7 +87,7 @@ void SenderWindow::moveLowerEdge(DataMessage * msg)
 
 void SenderWindow::advanceSendingPointer()
 {
-    toBeSent = (toBeSent + 1) % MAX_SEQ;
+    toBeSent = (toBeSent + 1) % (MAX_SEQ + 1);
     if(toBeSent==upperEdge)
     {
         toBeSent = lowerEdge;
@@ -95,7 +96,6 @@ void SenderWindow::advanceSendingPointer()
 
 
 SenderWindow::~SenderWindow() {
-    cout<<"Destructor call"<<endl;
     if(file.is_open())
     {
         file.close();
@@ -107,6 +107,5 @@ SenderWindow::~SenderWindow() {
         }
     }
     delete[] messages;
-    cout<<"Destructor end"<<endl;
 }
 

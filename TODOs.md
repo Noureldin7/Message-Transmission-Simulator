@@ -1,13 +1,14 @@
 ### DO NOT "CLEAN PROJECT" ... REMOVES THE CUSTOM MESSAGE IMPLEMENTATION
 # EventMessage //34an @Noureldin7 ❤
-### Purpose: Simulate Processing Delays, Timers
-## Data members:
-1. ### seqNum
-2. ### eventType
+### Will use cMessage with int kind
+### ~~Purpose: Simulate Processing Delays, Timers~~
+## ~~Data members:~~
+1. ### ~~seqNum~~
+2. ### ~~eventType~~
 
 <br/>
 
-# SenderWindow (Not discussed yet)
+# SenderWindow (Done)
 
 ### An object built around an array of data message pointers of fixed size (WS + 1), where out-of-window sequence numbers are null
 ## Data Members:
@@ -23,7 +24,7 @@
 - ### void advanceSendingPointer() // circular-increment (toBeSent) if not at upper edge
 - ### void setSendingPointer(int seqNum) //sets (toBeSent)
 
-<br/>
+<br>
 
 # DataMessage (Done)
 ## Data members:
@@ -44,3 +45,8 @@
 - ### int getSeqNum() //gets ackSeqNum or SeqNum
 - ### int getFrameType()
 - ### int isValid() //returns bit index or -1 if no error
+<br>
+
+- SetName
+- Int kind with control
+- Read line

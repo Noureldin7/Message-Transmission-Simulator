@@ -72,35 +72,38 @@ void Node::handleMessage(cMessage *msg)
             if(!msg->isSelfMessage())
             {
                 message = check_and_cast<DataMessage*>(msg);
+                senderWindow->moveLowerEdge(message);
             }
-            int seq = senderWindow->nextSeqNumToSend();
-            if(seq!=-1)
+//            else
             {
-                message = new DataMessage(*(senderWindow->getMsg(seq)));
-                message->setPayload(char(message->getPayloadWithFraming()[0] ^ char(16)) + message->getPayloadWithFraming().substr(1));
-                cout<<"Message without framing: " << message->getPayload()<<endl;
-                send(message,"outNode");
-                senderWindow->advanceSendingPointer();
+                int seq = senderWindow->nextSeqNumToSend();
+                if(seq!=-1)
+                {
+                    message = new DataMessage(*(senderWindow->getMsg(seq)));
+                    message->setPayload(char(message->getPayloadWithFraming()[0] ^ char(16)) + message->getPayloadWithFraming().substr(1));
+                    cout<<"Message without framing: " << message->getPayload()<<endl;
+                    send(message,"outNode");
+                    senderWindow->advanceSendingPointer();
+                }
+    //              DataMessage* message = new DataMessage(69, string("A$/"));
+    //              cout<<"Message after framing: " << message->getPayloadWithFraming()<<endl;
+    //              cout<<"Message SequenceNumber: " << message->getSeqNum()<<endl;
+    //              cout<<"Message frame type: " << message->getFrameType()<<endl;
+    //              cout<<"Message is Valid? : " << message->isValid()<<endl;
             }
-//              DataMessage* message = new DataMessage(69, string("A$/"));
-//              cout<<"Message after framing: " << message->getPayloadWithFraming()<<endl;
-//              cout<<"Message SequenceNumber: " << message->getSeqNum()<<endl;
-//              cout<<"Message frame type: " << message->getFrameType()<<endl;
-//              cout<<"Message is Valid? : " << message->isValid()<<endl;
         }
-        else{
+        else
+        {
             DataMessage * message = check_and_cast<DataMessage*>(msg);
             cout<<"Message after framing with error: " << message->getPayloadWithFraming()<<endl;
             cout<<"Message is Valid? after error in bit 0: " << message->isValid()<<endl;
             if(message->isValid()==-1)
             {
-                message = new DataMessage(message->getSeqNum(),"Ack");
-                message->setFrameType(1);
+                message = new DataMessage(message->getSeqNum(),FrameType::Ack);
             }
             else
             {
-                message = new DataMessage(message->getSeqNum(),"Nack");
-                message->setFrameType(2);
+                message = new DataMessage(message->getSeqNum(),FrameType::Ack);//nack here
             }
             cout << "Response Frame Type: "<< message->getFrameType()<<endl;
             cout << "Response Sequence Number: "<< message->getSeqNum()<<endl;
@@ -113,10 +116,8 @@ void Node::handleMessage(cMessage *msg)
 
 
 Node::~Node() {
-    cout<<"Destructor Node"<<endl;
     if(senderWindow)
     {
         delete senderWindow;
     }
-    cout<<"Destructor Node end"<<endl;
 }

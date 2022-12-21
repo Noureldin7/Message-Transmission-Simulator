@@ -170,7 +170,7 @@ inline std::ostream& operator<<(std::ostream& out, const std::vector<T,A>& vec)
         out << *it;
     }
     out.put('}');
-    
+
     char buf[32];
     sprintf(buf, " (size=%u)", (unsigned int)vec.size());
     out.write(buf, strlen(buf));
@@ -190,10 +190,14 @@ DataMessage::DataMessage(const char *name, short kind) : ::omnetpp::cPacket(name
 DataMessage::DataMessage(int SeqNum, string Msg) : ::omnetpp::cPacket(nullptr,0)
 {
     this->seqNum = SeqNum;
-    this->payload = frameMessage(Msg);
+    string message_payload = Msg.substr(5);
+    string message_control = Msg.substr(0, 4);
+    this->setKind(stoi(message_control, NULL, 2));
+    this->payload = frameMessage(message_payload);
     this->parity = calculateParity(this->payload.str());
-    this->frameType = 0;
+    this->frameType = FrameType::Data;
     this->ackSeqNum = 0;
+    this->setName(this->payload.c_str());
 }
 
 DataMessage::DataMessage(int SeqNum, int Type) : ::omnetpp::cPacket(nullptr,0)
@@ -229,6 +233,8 @@ void DataMessage::copy(const DataMessage& other)
     this->parity = other.parity;
     this->frameType = other.frameType;
     this->ackSeqNum = other.ackSeqNum;
+    this->setKind(other.getKind());
+    this->setName(other.getName());
 }
 
 string DataMessage::frameMessage(const string& Msg) const
@@ -318,6 +324,7 @@ string DataMessage::getPayloadWithFraming() const
 void DataMessage::setPayload(string payload)
 {
     this->payload = payload;
+    this->setName(payload.c_str());
 }
 
 char DataMessage::getParity() const

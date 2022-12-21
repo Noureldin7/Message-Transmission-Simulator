@@ -11,6 +11,7 @@
 #include <omnetpp.h>
 #include <string>
 using std::string;
+using std::stoi;
 // nedtool version check
 #define MSGC_VERSION 0x0506
 #if (MSGC_VERSION!=OMNETPP_VERSION)
@@ -18,7 +19,11 @@ using std::string;
 #endif
 
 
-
+enum FrameType{
+    Data,
+    Ack,
+    Nack
+};
 /**
  * Class generated from <tt>DataMessage.msg:34</tt> by nedtool.
  * <pre>
