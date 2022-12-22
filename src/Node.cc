@@ -92,6 +92,10 @@ void Node::handleMessage(cMessage *msg)
                 {
                     int seq = senderWindow->nextSeqNumToSend();
                     message = senderWindow->getMsg(seq);
+                    if(msg->getName()[0]!='\0')
+                    {
+                        message = senderWindow->getMsg(atoi(msg->getName()));
+                    }
                     cout<<seq<<endl;
                     int prefix = message->getKind();
                     bool delay = prefix & 0b0001;
@@ -106,10 +110,10 @@ void Node::handleMessage(cMessage *msg)
                             delayValue+=ED;
                         }
 //                        cout<<msg->getName()<<"===========";
-                        if(msg->getName()[0]!='\0')
-                        {
-                            message = senderWindow->getMsg(atoi(msg->getName()));
-                        }
+//                        if(msg->getName()[0]!='\0')
+//                        {
+//                            message = senderWindow->getMsg(atoi(msg->getName()));
+//                        }
                         message = new DataMessage(*message);
                         if(mod)
                         {
