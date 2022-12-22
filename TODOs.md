@@ -1,10 +1,19 @@
+# Up Next
+## 1. Logs
+## 2. Ack/Nack Delays
+## 3. Ack/Nack Loss Probability
+## 4. Ack/Nack SeqNum Offset
+# 
+
+<del>
+
 ### DO NOT "CLEAN PROJECT" ... REMOVES THE CUSTOM MESSAGE IMPLEMENTATION
 # EventMessage //34an @Noureldin7 ❤
 ### Will use cMessage with int kind
-### ~~Purpose: Simulate Processing Delays, Timers~~
-## ~~Data members:~~
-1. ### ~~seqNum~~
-2. ### ~~eventType~~
+### Purpose: Simulate Processing Delays, Timers
+## Data members:
+1. ### seqNum
+2. ### eventType
 
 <br/>
 
@@ -50,3 +59,4 @@
 - SetName
 - Int kind with control
 - Read line
+<del>
