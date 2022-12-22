@@ -11,11 +11,11 @@ SenderWindow::SenderWindow(int WS, string filepath) {
     lowerEdge = 0;
     upperEdge = 0;
     toBeSent = 0;
-    MAX_SEQ = WS + 1;
-    messages = new DataMessage * [MAX_SEQ];
+    MAX_SEQ = WS;
+    messages = new DataMessage * [MAX_SEQ + 1];
     file.open(filepath,ifstream::in);
     string line;
-    for (int i = 0; i <= WS; i++)
+    for (int i = 0; i < WS; i++)
     {
         if(!getline(file,line))
         {
@@ -24,7 +24,7 @@ SenderWindow::SenderWindow(int WS, string filepath) {
         }
         messages[i] = new DataMessage(upperEdge++,line.c_str());
     }
-    //messages[MAX_SEQ] = NULL;
+    messages[MAX_SEQ] = NULL;
 }
 
 //void SenderWindow::init(int WS,string filepath)
@@ -56,9 +56,9 @@ DataMessage * SenderWindow::getMsg(int seqNum)
     return messages[seqNum];
 }
 
-void SenderWindow::setSendingPointer(int seqNum)
+void SenderWindow::resetSendingPointer()
 {
-    toBeSent = seqNum;
+    toBeSent = lowerEdge;
 }
 
 int SenderWindow::nextSeqNumToSend()
@@ -108,7 +108,7 @@ SenderWindow::~SenderWindow() {
     {
         file.close();
     }
-    for (int i = 0; i < MAX_SEQ; ++i) {
+    for (int i = 0; i <= MAX_SEQ; ++i) {
         if(messages[i])
         {
             delete messages[i];

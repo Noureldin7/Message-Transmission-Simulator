@@ -32,7 +32,7 @@ public:
     void moveLowerEdge(DataMessage * msg);
     int nextSeqNumToSend();
     void advanceSendingPointer();
-    void setSendingPointer(int seqNum);
+    void resetSendingPointer();
     SenderWindow(int WS, string filepath);
     ~SenderWindow();
 };

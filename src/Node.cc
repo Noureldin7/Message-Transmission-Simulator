@@ -25,6 +25,7 @@ void Node::initialize()
     // TODO - Generated method body
     imSender = 0;
     isInit = 1;
+    frameExpected = 0;
     WS = getParentModule()->par("WS").intValue();
     TO = getParentModule()->par("TO").doubleValue();
     PT = getParentModule()->par("PT").doubleValue();
@@ -37,12 +38,13 @@ void Node::initialize()
 void Node::handleMessage(cMessage *msg)
 {
     // TODO - Generated method body
+    bool is_timeout = false;
     if(string(msg->getName())=="-1")
     {
         isInit = 0;
         senderWindow = NULL;
         timers = NULL;
-        cancelAndDelete(msg);
+//        cancelAndDelete(msg);
     }
     else if(isInit)
     {
@@ -62,9 +64,9 @@ void Node::handleMessage(cMessage *msg)
         }
 
         int startTime = atoi(msg->getName());
-        cMessage * mssg = new cMessage("",timeout);
+        cMessage * mssg = new cMessage("",0);
         scheduleAt(simTime()+startTime, mssg);
-        cancelAndDelete(msg);
+//        cancelAndDelete(msg);
     }
     else
     {
@@ -77,25 +79,15 @@ void Node::handleMessage(cMessage *msg)
                 message = check_and_cast<DataMessage*>(msg);
                 senderWindow->moveLowerEdge(message);
                 cout<<"done"<<endl;
-//                int seq = message->getSeqNum();
-//                if(timers[seq]->isScheduled())
-//                {
-//                    cancelEvent(timers[seq]);
-//                }
-                cancelAndDelete(msg);
+                int seq = message->getSeqNum();
+                if(timers[seq]->isScheduled())
+                {
+                    cancelEvent(timers[seq]);
+                }
+//                cancelAndDelete(msg);
             }
             else
             {
-                //if prefix loss => NoscheduleAt__NoSend__NoAdvance
-                //if prefix dup => scheduleAt+dupDelay__Send__NoAdvance
-                //if prefix delay => scheduleAt+delay__NoSend__NoAdvance
-                //if prefix mod => AddMod__scheduleAt__Send__Advance
-//                if(seq==-1)
-//                {
-//                    cancelAndDelete(msg);
-//                    return;
-//                }
-
                 if(msg->getKind()==processTime)
                 {
                     int seq = senderWindow->nextSeqNumToSend();
@@ -103,7 +95,7 @@ void Node::handleMessage(cMessage *msg)
                     cout<<seq<<endl;
                     int prefix = message->getKind();
                     bool delay = prefix & 0b0001;
-                    bool dup = prefix & 0b0010;
+//                    bool dup = prefix & 0b0010;
                     bool loss = prefix & 0b0100;
                     bool mod = prefix & 0b1000;
                     double delayValue = TD;
@@ -137,10 +129,25 @@ void Node::handleMessage(cMessage *msg)
                         cancelAndDelete(msg);
                         return;
                     }
-                    cancelAndDelete(msg);
+//                    cancelAndDelete(msg);
                 }
 
+                if (msg->getKind() == timeout)
+                {
+                    is_timeout = true;
+                    senderWindow->resetSendingPointer();
+                    for (int i = 0; i <= WS; ++i)
+                    {
+                        if(timers[i]->isScheduled())
+                        {
+                            cancelEvent(timers[i]);
+                        }
+                    }
+                    int seq = senderWindow->nextSeqNumToSend();
+                    senderWindow->getMsg(seq)->setKind(0);
+                    //CLEAR KIND, DISABLE TIMERS, RESET SENDING POINTER
 
+                }
                 int seq = senderWindow->nextSeqNumToSend();
                 if(seq!=-1)
                 {
@@ -154,11 +161,11 @@ void Node::handleMessage(cMessage *msg)
                     }
                     scheduleAt(simTime() + PT, new cMessage("",processTime));
                     // Log 1
-//                    if(timers[seq]->isScheduled())
-//                    {
-//                        cancelEvent(timers[seq]);
-//                    }
-//                    scheduleAt(simTime() + TO, timers[seq]);
+                    if(timers[seq]->isScheduled())
+                    {
+                        cancelEvent(timers[seq]);
+                    }
+                    scheduleAt(simTime() + TO, timers[seq]);
                 }
             }
         }
@@ -167,9 +174,10 @@ void Node::handleMessage(cMessage *msg)
             DataMessage * message = check_and_cast<DataMessage*>(msg);
 //            cout<<"Message after framing with error: " << message->getPayloadWithFraming()<<endl;
 //            cout<<"Message is Valid? after error in bit 0: " << message->isValid()<<endl;
-            if(message->isValid()==-1)
+            if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
             {
                 message = new DataMessage(message->getSeqNum(),FrameType::Ack);
+                frameExpected = (frameExpected + 1) % (WS + 1);
             }
             else
             {
@@ -179,8 +187,11 @@ void Node::handleMessage(cMessage *msg)
 //            cout << "Response Sequence Number: "<< message->getSeqNum()<<endl;
             send(message, "outNode");
             // Log 4
-            cancelAndDelete(msg);
         }
+    }
+    if (!is_timeout)
+    {
+        cancelAndDelete(msg);
     }
 }
 

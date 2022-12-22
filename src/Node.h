@@ -39,6 +39,7 @@ class Node : public cSimpleModule
   protected:
     int imSender;
     int isInit;
+    int frameExpected;
     int WS;
     double TO;
     double PT;
