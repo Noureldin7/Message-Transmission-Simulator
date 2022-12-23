@@ -30,7 +30,8 @@ using std::string;
  */
 enum TimerType{
     timeout = 1,
-    processTime = 2
+    processTime = 2,
+    duplicateProcessTime = 3
 };
 class Node : public cSimpleModule
 {

@@ -49,7 +49,7 @@ void Node::initializeRoutine(cMessage *msg)
         for (int i = 0; i <= WS; ++i)
         {
 
-            timers[i] = new cMessage(to_string(i).c_str(),timeout);
+            timers[i] = new cMessage(to_string(i).c_str(),TimerType::timeout);
         }
 
         int startTime = atoi(msg->getName());
@@ -119,18 +119,12 @@ string Node::constructLog4Message(FrameType type, int seq_num, bool isLost)
 // Returns whether the message processed was a second duplicate
 bool Node::senderProcessMessage(cMessage *msg)
 {
-    int seq = senderWindow->nextSeqNumToSend();
-    DataMessage* message;
+    int seq = atoi(msg->getName());
+    DataMessage* message = senderWindow->getMsg(seq);
     bool isSecondDuplicate = false;
-    if(msg->getName()[0]=='\0') //if the message is not a second duplicate
-    {
-        message = senderWindow->getMsg(seq);
-        senderWindow->advanceSendingPointer();
-    }
-    else
+    if(msg->getKind() == TimerType::duplicateProcessTime) //if the message is not a second duplicate
     {
         isSecondDuplicate = true;
-        message = senderWindow->getMsg(atoi(msg->getName()));
         cancelAndDelete(msg);
     }
     int prefix = message->getKind();
@@ -159,7 +153,7 @@ bool Node::senderProcessMessage(cMessage *msg)
 void Node::scheduleNextMessage(cMessage *msg)
 {
     int seq = senderWindow->nextSeqNumToSend();
-    if (msg->getKind() == timeout)
+    if (msg->getKind() == TimerType::timeout)
     {
         senderWindow->resetSendingPointer();
         for (int seqNum = 0; seqNum <= WS; ++seqNum)
@@ -185,20 +179,21 @@ void Node::scheduleNextMessage(cMessage *msg)
         bool dup = prefix & 0b0010;
         if(dup)
         {
-            scheduleAt(simTime() + PT + DD, new cMessage(to_string(seq).c_str(),processTime));
+            scheduleAt(simTime() + PT + DD, new cMessage(to_string(seq).c_str(), TimerType::duplicateProcessTime));
         }
-        scheduleAt(simTime() + PT, new cMessage("",processTime));
+        scheduleAt(simTime() + PT, new cMessage(to_string(seq).c_str(),TimerType::processTime));
         if(timers[(seq + 1) % (WS + 1)]->isScheduled())
         {
             cancelEvent(timers[(seq + 1) % (WS + 1)]);
         }
         scheduleAt(simTime() + TO, timers[(seq + 1) % (WS + 1)]);
+        senderWindow->advanceSendingPointer();
         // Log 1
         string logMessage = constructLog1Message(prefix);
         cout << logMessage;
     }
 
-    if (msg->getKind() != timeout)
+    if (msg->getKind() != TimerType::timeout)
     {
         cancelAndDelete(msg);
     }
@@ -217,12 +212,16 @@ void Node::senderLogic(cMessage *msg)
         if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
         {
             cancelEvent(timers[seq]);
+            message->setKind(0);
         }
-        cancelAndDelete(msg);
-        return;
+        else
+        {
+            cancelAndDelete(msg);
+            return;
+        }
     }
     //The message is a timing control message
-    if(msg->getKind()==processTime && senderProcessMessage(msg))
+    if(msg->isSelfMessage() && msg->getKind()==TimerType::processTime && senderProcessMessage(msg))
     {
         return;
     }
@@ -244,7 +243,7 @@ void Node::receiverLogic(cMessage *msg)
     }
     //Send control frame
     DataMessage * message = check_and_cast<DataMessage*>(msg);
-    bool isLost = false; //TODO: Add randomness
+    bool isLost = false; //TODO: Add randomness (random <= Probabilty)
     if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
     {
         // Log 4
