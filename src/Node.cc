@@ -146,43 +146,46 @@ void Node::scheduleNextMessage(cMessage *msg)
 
 void Node::senderLogic(cMessage *msg)
 {
-    if(msg->isSelfMessage()) //Check if the message is a control message
+    if (!msg->isSelfMessage()) //If the message is from the receiver (Ack or Nack)
     {
-        if(msg->getKind()==processTime)
+        DataMessage* message = check_and_cast<DataMessage*>(msg);
+        senderWindow->moveLowerEdge(message);
+        int seq = message->getSeqNum();
+        if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
         {
-            if (senderProcessMessage(msg))
-            {
-                return;
-            }
+            cancelEvent(timers[seq]);
         }
-        scheduleNextMessage(msg);
+        cancelAndDelete(msg);
         return;
     }
-    //If the message is from the receiver (Ack or Nack)
-    DataMessage* message = check_and_cast<DataMessage*>(msg);
-    senderWindow->moveLowerEdge(message);
-    int seq = message->getSeqNum();
-    if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
+    //If the message is a control message
+    if(msg->getKind()==processTime && senderProcessMessage(msg))
     {
-        cancelEvent(timers[seq]);
+        return;
     }
-    cancelAndDelete(msg);
+    scheduleNextMessage(msg);
 }
 
 void Node::receiverLogic(cMessage *msg)
 {
+    if (!msg->isSelfMessage())
+    {
+        scheduleAt(simTime() + PT, msg);
+        return;
+    }
     DataMessage * message = check_and_cast<DataMessage*>(msg);
     if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
     {
+        // Log 4
         frameExpected = (frameExpected + 1) % (WS + 1);
         message = new DataMessage(frameExpected,FrameType::Ack);
     }
     else
     {
-        message = new DataMessage(frameExpected,FrameType::Nack);//nack here
+        // Log 4
+        message = new DataMessage(frameExpected,FrameType::Nack);
     }
-    send(message, "outNode");
-    // Log 4
+    sendDelayed(message, TD, "outNode");
     cancelAndDelete(msg);
 }
 
