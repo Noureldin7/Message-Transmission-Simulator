@@ -36,15 +36,18 @@ void Node::initialize()
 void Node::initializeRoutine(cMessage *msg)
 {
     isInit = 0;
+    string outputFilePath = "../texts/outputx.txt";
+    char index = par("Index").stringValue()[0];
+    outputFilePath[15] = index;
+    outputFile.open(outputFilePath, ofstream::out);
+
     if(string(msg->getName())!="-1") //imSender
     {
         imSender = 1;
+        string inputFilePath = "../texts/inputx.txt";
+        inputFilePath[14] = index;
 
-        string filepath = "../texts/inputx.txt";
-        char index = par("Index").stringValue()[0];
-        filepath[14] = index;
-
-        senderWindow = new SenderWindow(WS,filepath);
+        senderWindow = new SenderWindow(WS,inputFilePath);
         timers = new cMessage*[WS];
         for (int i = 0; i < WS; ++i)
         {
@@ -85,7 +88,7 @@ string Node::constructLog2Message(bool sent, int seq_num, string payload, char p
     message += ", Delay ";
     ostringstream strs;
     strs << ((error_code & 0b0001) ? ED : 0);
-    message += strs.str(); //TODO: Check which delay to print
+    message += strs.str();
     message += "\n";
     return message;
 
@@ -136,6 +139,7 @@ bool Node::senderProcessMessage(cMessage *msg)
     // Log 2
     string logMessage = constructLog2Message(true , message->getSeqNum(), message->getPayloadWithFraming(), message->getParity(), mod ? bitToModify : -1, prefix, isSecondDuplicate);
     cout << logMessage;
+    outputFile << logMessage;
     if (!loss)
     {
         message = new DataMessage(*message);
@@ -168,6 +172,7 @@ void Node::scheduleNextMessage(cMessage *msg)
                 // Log 3
                 string logMessage = constructLog3Message((seqNum + WS - 1) % WS); //Circular decrement
                 cout << logMessage;
+                outputFile << logMessage;
             }
             if(timers[seqNum]->isScheduled())
             {
@@ -191,6 +196,7 @@ void Node::scheduleNextMessage(cMessage *msg)
         // Log 1
         string logMessage = constructLog1Message(prefix);
         cout << logMessage;
+        outputFile << logMessage;
     }
 
     if (msg->getKind() != TimerType::timeout)
@@ -204,9 +210,6 @@ void Node::senderLogic(cMessage *msg)
     if (!msg->isSelfMessage()) //If the message is from the receiver (Ack or Nack)
     {
         DataMessage* message = check_and_cast<DataMessage*>(msg);
-        // // TODO: Log 2 Stupid, Declaring reception of ACK/NACK can be done is so many better ways
-        // string logMessage = constructLog2Message(false , message->getSeqNum(), message->getPayloadWithFraming(), message->getParity(), -1, 0, false);
-        // cout << logMessage;
         senderWindow->moveLowerEdge(message);
         int seq = message->getSeqNum();
         if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
@@ -232,18 +235,13 @@ void Node::receiverLogic(cMessage *msg)
 {
     if (!msg->isSelfMessage()) //If message is from sender
     {
-        // //Log 2
-        // DataMessage* message = check_and_cast<DataMessage*>(msg);
-        // int prefix = message->getKind();
-        // //TODO: Second Duplicate???
-        // string logMessage = constructLog2Message(false , message->getSeqNum(), message->getPayloadWithFraming(), message->getParity(), message->isValid(), prefix, (prefix & 0b0010));
-        // cout << logMessage;
         scheduleAt(simTime() + PT, msg); //reschedule
         return;
     }
     //Send control frame
     DataMessage * message = check_and_cast<DataMessage*>(msg);
-    bool isLost = false; //TODO: Add randomness (random <= Probabilty)
+    //bool isLost = (par("random").doubleValue() <= LP); //TODO: Add randomness (random <= Probabilty)
+    bool isLost = false;
     if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
     {
         // Log 4
@@ -251,6 +249,7 @@ void Node::receiverLogic(cMessage *msg)
         message = new DataMessage(frameExpected,FrameType::Ack);
         string logMessage = constructLog4Message(FrameType::Ack, message->getSeqNum(), isLost);
         cout << logMessage;
+        outputFile << logMessage;
     }
     else
     {
@@ -258,6 +257,7 @@ void Node::receiverLogic(cMessage *msg)
         message = new DataMessage(frameExpected,FrameType::Nack);
         string logMessage = constructLog4Message(FrameType::Nack, message->getSeqNum(), isLost);
         cout << logMessage;
+        outputFile << logMessage;
     }
 
     if (isLost)
@@ -293,6 +293,7 @@ void Node::handleMessage(cMessage *msg)
 
 
 Node::~Node() {
+    outputFile.close();
     if(senderWindow)
     {
         for (int i = 0; i < WS; ++i)

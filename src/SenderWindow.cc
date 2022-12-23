@@ -40,9 +40,8 @@ void SenderWindow::resetSendingPointer()
     toBeSent = 0;
 }
 
-bool SenderWindow::isBetween(int a, int b, int c) // a <=c < b
+bool SenderWindow::isBetween(int a, int b, int c) // a <=b <= c
 {
-    // return (((a <= b) && (b < c)) || ((c < a) && (a <= b)) || ((b < c) && (c < a)));
     return (((a <= b) && (b <= c)) || ((c < a) && (a <= b)) || ((b <= c) && (c < a)));
 }
 

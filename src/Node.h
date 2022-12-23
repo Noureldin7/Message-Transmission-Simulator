@@ -24,6 +24,7 @@
 #include "DataMessage_m.h"
 using namespace omnetpp;
 using std::string;
+using std::ofstream;
 
 /**
  * TODO - Generated class
@@ -50,6 +51,7 @@ class Node : public cSimpleModule
     double DD;
     double LP;
     cMessage ** timers;  // kind = 1 for timeout timer 2 for processing time
+    ofstream outputFile;
     virtual void initialize();
     virtual void initializeRoutine(cMessage *msg);
     virtual string constructLog1Message(int error_code);
