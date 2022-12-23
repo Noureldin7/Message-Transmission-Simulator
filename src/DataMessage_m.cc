@@ -203,7 +203,7 @@ DataMessage::DataMessage(int SeqNum, string Msg) : ::omnetpp::cPacket(nullptr,0)
 DataMessage::DataMessage(int SeqNum, int Type) : ::omnetpp::cPacket(nullptr,0)
 {
     this->seqNum = 0;
-    this->payload = "";
+    this->payload = "$$";
     this->parity = 0;
     this->frameType = Type;
     this->ackSeqNum = SeqNum;
@@ -329,9 +329,16 @@ void DataMessage::setPayload(string payload)
     this->setName(payload.c_str());
 }
 
+// TODO: Parity with or without modification?
 char DataMessage::getParity() const
 {
-    return this->parity;
+    // return this->parity;
+    char parity_check = 0;
+    string payload = this->payload.str();
+    for (int i = 0; i < payload.size(); i++){
+        parity_check ^= payload[i];
+    }
+    return parity_check;
 }
 
 void DataMessage::setParity(char parity)

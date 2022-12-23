@@ -1,9 +1,7 @@
 package project;
 
 @license(LGPL);
-//
-// TODO documentation
-//
+
 network Network
 {
     parameters:

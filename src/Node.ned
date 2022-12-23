@@ -15,9 +15,6 @@
 
 package project;
 
-//
-// TODO auto-generated module
-//
 simple Node
 {
     parameters:

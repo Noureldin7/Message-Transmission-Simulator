@@ -29,7 +29,6 @@ string Coordinator::readInput(string filepath)
 
 void Coordinator::initialize()
 {
-    // TODO - Generated method body
     string input = readInput("../texts/coordinator.txt");
     string startingNode = "out";
     startingNode += input[0];
@@ -47,5 +46,5 @@ void Coordinator::initialize()
 
 void Coordinator::handleMessage(cMessage *msg)
 {
-    // TODO - Generated method body
+
 }

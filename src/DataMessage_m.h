@@ -43,9 +43,6 @@ enum FrameType{
  * //  typedef Type std::string;
  * //}}
  * //class Type;
- * //
- * // TODO generated message class
- * //
  * packet DataMessage
  * {
  *     int seqNum;

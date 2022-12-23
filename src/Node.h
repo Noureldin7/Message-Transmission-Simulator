@@ -16,11 +16,12 @@
 #ifndef __PROJECT_NODE_H_
 #define __PROJECT_NODE_H_
 
-#include <omnetpp.h>
-#include <string>
 #include <iostream>
-
+#include <string>
+#include <bitset>
+#include <omnetpp.h>
 #include "SenderWindow.h"
+#include "DataMessage_m.h"
 using namespace omnetpp;
 using std::string;
 
@@ -49,12 +50,16 @@ class Node : public cSimpleModule
     double LP;
     cMessage ** timers;  // kind = 1 for timeout timer 2 for processing time
     virtual void initialize();
-    virtual void handleMessage(cMessage *msg);
     virtual void initializeRoutine(cMessage *msg);
+    virtual string constructLog1Message(int error_code);
+    virtual string constructLog2Message(bool sent, int seq_num, string payload, char parity, int isValid, int error_code, bool isSecondDuplicate);
+    virtual string constructLog3Message(int seq_num);
+    virtual string constructLog4Message(FrameType type, int seq_num, bool isLost);
     virtual bool senderProcessMessage(cMessage *msg);
     virtual void scheduleNextMessage(cMessage *msg);
     virtual void senderLogic(cMessage *msg);
     virtual void receiverLogic(cMessage *msg);
+    virtual void handleMessage(cMessage *msg);
 };
 
 #endif

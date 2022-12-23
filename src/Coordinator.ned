@@ -15,9 +15,7 @@
 
 package project;
 
-//
-// TODO auto-generated module
-//
+
 simple Coordinator
 {
     gates:
