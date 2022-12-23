@@ -45,8 +45,8 @@ void Node::initializeRoutine(cMessage *msg)
         filepath[14] = index;
 
         senderWindow = new SenderWindow(WS,filepath);
-        timers = new cMessage*[WS + 1];
-        for (int i = 0; i <= WS; ++i)
+        timers = new cMessage*[WS];
+        for (int i = 0; i < WS; ++i)
         {
 
             timers[i] = new cMessage(to_string(i).c_str(),TimerType::timeout);
@@ -147,6 +147,11 @@ bool Node::senderProcessMessage(cMessage *msg)
         }
         sendDelayed(message,delayValue,"outNode");
     }
+    if(timers[(seq + 1) % WS]->isScheduled())
+    {
+        cancelEvent(timers[(seq + 1) % WS]);
+    }
+    scheduleAt(simTime() + TO, timers[(seq + 1) % WS]);
     return isSecondDuplicate;
 }
 
@@ -156,12 +161,12 @@ void Node::scheduleNextMessage(cMessage *msg)
     if (msg->getKind() == TimerType::timeout)
     {
         senderWindow->resetSendingPointer();
-        for (int seqNum = 0; seqNum <= WS; ++seqNum)
+        for (int seqNum = 0; seqNum < WS; ++seqNum)
         {
             if(timers[seqNum] == msg)
             {
                 // Log 3
-                string logMessage = constructLog3Message((seqNum + WS) % (WS + 1)); //Circular decrement
+                string logMessage = constructLog3Message((seqNum + WS - 1) % WS); //Circular decrement
                 cout << logMessage;
             }
             if(timers[seqNum]->isScheduled())
@@ -182,11 +187,6 @@ void Node::scheduleNextMessage(cMessage *msg)
             scheduleAt(simTime() + PT + DD, new cMessage(to_string(seq).c_str(), TimerType::duplicateProcessTime));
         }
         scheduleAt(simTime() + PT, new cMessage(to_string(seq).c_str(),TimerType::processTime));
-        if(timers[(seq + 1) % (WS + 1)]->isScheduled())
-        {
-            cancelEvent(timers[(seq + 1) % (WS + 1)]);
-        }
-        scheduleAt(simTime() + TO, timers[(seq + 1) % (WS + 1)]);
         senderWindow->advanceSendingPointer();
         // Log 1
         string logMessage = constructLog1Message(prefix);
@@ -204,9 +204,9 @@ void Node::senderLogic(cMessage *msg)
     if (!msg->isSelfMessage()) //If the message is from the receiver (Ack or Nack)
     {
         DataMessage* message = check_and_cast<DataMessage*>(msg);
-        // TODO: Log 2 Stupid, Declaring reception of ACK/NACK can be done is so many better ways
-        string logMessage = constructLog2Message(false , message->getSeqNum(), message->getPayloadWithFraming(), message->getParity(), -1, 0, false);
-        cout << logMessage;
+        // // TODO: Log 2 Stupid, Declaring reception of ACK/NACK can be done is so many better ways
+        // string logMessage = constructLog2Message(false , message->getSeqNum(), message->getPayloadWithFraming(), message->getParity(), -1, 0, false);
+        // cout << logMessage;
         senderWindow->moveLowerEdge(message);
         int seq = message->getSeqNum();
         if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
@@ -232,12 +232,12 @@ void Node::receiverLogic(cMessage *msg)
 {
     if (!msg->isSelfMessage()) //If message is from sender
     {
-        //Log 2
-        DataMessage* message = check_and_cast<DataMessage*>(msg);
-        int prefix = message->getKind();
-        //TODO: Second Duplicate???
-        string logMessage = constructLog2Message(false , message->getSeqNum(), message->getPayloadWithFraming(), message->getParity(), message->isValid(), prefix, (prefix & 0b0010));
-        cout << logMessage;
+        // //Log 2
+        // DataMessage* message = check_and_cast<DataMessage*>(msg);
+        // int prefix = message->getKind();
+        // //TODO: Second Duplicate???
+        // string logMessage = constructLog2Message(false , message->getSeqNum(), message->getPayloadWithFraming(), message->getParity(), message->isValid(), prefix, (prefix & 0b0010));
+        // cout << logMessage;
         scheduleAt(simTime() + PT, msg); //reschedule
         return;
     }
@@ -247,7 +247,7 @@ void Node::receiverLogic(cMessage *msg)
     if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
     {
         // Log 4
-        frameExpected = (frameExpected + 1) % (WS + 1);
+        frameExpected = (frameExpected + 1) % WS;
         message = new DataMessage(frameExpected,FrameType::Ack);
         string logMessage = constructLog4Message(FrameType::Ack, message->getSeqNum(), isLost);
         cout << logMessage;
@@ -295,7 +295,7 @@ void Node::handleMessage(cMessage *msg)
 Node::~Node() {
     if(senderWindow)
     {
-        for (int i = 0; i <= WS; ++i)
+        for (int i = 0; i < WS; ++i)
         {
             cancelAndDelete(timers[i]);
         }

@@ -24,7 +24,7 @@ private:
     int toBeSent;
     ifstream file;
     DataMessage ** messages;
-
+    bool isBetween(int a, int b, int c);
 
 public:
     DataMessage * getMsg(int seqNum);

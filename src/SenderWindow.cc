@@ -9,10 +9,10 @@
 
 SenderWindow::SenderWindow(int WS, string filepath) {
     lowerEdge = 0;
-    upperEdge = 0;
+    upperEdge = -1;
     toBeSent = 0;
     MAX_SEQ = WS;
-    messages = new DataMessage * [MAX_SEQ + 1];
+    messages = new DataMessage * [MAX_SEQ];
     file.open(filepath,ifstream::in);
     string line;
     for (int i = 0; i < WS; i++)
@@ -22,9 +22,8 @@ SenderWindow::SenderWindow(int WS, string filepath) {
             messages[i] = NULL;
             continue;
         }
-        messages[i] = new DataMessage(upperEdge++,line.c_str());
+        messages[i] = new DataMessage(++upperEdge,line.c_str());
     }
-    messages[MAX_SEQ] = NULL;
 }
 
 DataMessage * SenderWindow::getMsg(int seqNum)
@@ -38,38 +37,46 @@ DataMessage * SenderWindow::getMsg(int seqNum)
 
 void SenderWindow::resetSendingPointer()
 {
-    toBeSent = lowerEdge;
+    toBeSent = 0;
+}
+
+bool SenderWindow::isBetween(int a, int b, int c) // a <=c < b
+{
+    // return (((a <= b) && (b < c)) || ((c < a) && (a <= b)) || ((b < c) && (c < a)));
+    return (((a <= b) && (b <= c)) || ((c < a) && (a <= b)) || ((b <= c) && (c < a)));
 }
 
 int SenderWindow::nextSeqNumToSend()
 {
-    return toBeSent==upperEdge?-1:toBeSent;
+    if (!messages[lowerEdge]) return -1;
+    return (isBetween(lowerEdge, (lowerEdge + toBeSent) % MAX_SEQ, upperEdge) && toBeSent < MAX_SEQ) ? ((lowerEdge + toBeSent) % MAX_SEQ) : -1;
 }
 
 void SenderWindow::moveLowerEdge(DataMessage * msg)
 {
     if(msg->getFrameType()==FrameType::Ack)
     {
-        if(msg->getSeqNum()==(lowerEdge + 1) % (MAX_SEQ + 1))
+        if(msg->getSeqNum()==(lowerEdge + 1) % MAX_SEQ)
         {
             delete messages[lowerEdge];
             messages[lowerEdge]=NULL;
-            lowerEdge = (lowerEdge + 1) % (MAX_SEQ + 1);
+            lowerEdge = (lowerEdge + 1) % MAX_SEQ;
             string line;
             if(getline(file,line))
             {
+                upperEdge = (upperEdge + 1) % MAX_SEQ;
                 messages[upperEdge] = new DataMessage(upperEdge,line.c_str()); //tbc
-                upperEdge = (upperEdge + 1) % (MAX_SEQ + 1);
             }
+            toBeSent--;
         }
     }
 }
 
 void SenderWindow::advanceSendingPointer()
 {
-    if(toBeSent!=upperEdge)
+    if(isBetween(lowerEdge, (lowerEdge + toBeSent) % MAX_SEQ, upperEdge) && toBeSent < MAX_SEQ)
     {
-        toBeSent = (toBeSent + 1) % (MAX_SEQ + 1);
+        toBeSent++;
     }
 }
 
@@ -79,7 +86,7 @@ SenderWindow::~SenderWindow() {
     {
         file.close();
     }
-    for (int i = 0; i <= MAX_SEQ; ++i) {
+    for (int i = 0; i < MAX_SEQ; ++i) {
         if(messages[i])
         {
             delete messages[i];
