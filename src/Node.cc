@@ -26,6 +26,8 @@ void Node::initialize()
     imSender = 0;
     isInit = 1;
     frameExpected = 0;
+    senderWindow = NULL;
+    timers = NULL;
     WS = getParentModule()->par("WS").intValue();
     TO = getParentModule()->par("TO").doubleValue();
     PT = getParentModule()->par("PT").doubleValue();
@@ -35,21 +37,12 @@ void Node::initialize()
     LP = getParentModule()->par("LP").doubleValue();
 }
 
-void Node::handleMessage(cMessage *msg)
+void Node::initializeRoutine(cMessage *msg)
 {
-    // TODO - Generated method body
-    bool is_timeout = false;
-    if(string(msg->getName())=="-1")
-    {
-        isInit = 0;
-        senderWindow = NULL;
-        timers = NULL;
-//        cancelAndDelete(msg);
-    }
-    else if(isInit)
+    isInit = 0;
+    if(string(msg->getName())!="-1") //imSender
     {
         imSender = 1;
-        isInit = 0;
 
         string filepath = "../texts/inputx.txt";
         char index = par("Index").stringValue()[0];
@@ -64,138 +57,151 @@ void Node::handleMessage(cMessage *msg)
         }
 
         int startTime = atoi(msg->getName());
-        cMessage * mssg = new cMessage("",0);
-        scheduleAt(simTime()+startTime, mssg);
-//        cancelAndDelete(msg);
+        scheduleAt(simTime()+startTime, new cMessage("",0));
+    }
+    cancelAndDelete(msg);
+}
+
+// Processes send request according to the four control bits
+// Returns whether the message processed was a second duplicate
+bool Node::senderProcessMessage(cMessage *msg)
+{
+    int seq = senderWindow->nextSeqNumToSend();
+    DataMessage* message;
+    bool isSecondDuplicate = false;
+    if(msg->getName()[0]=='\0') //if the message is not a second duplicate
+    {
+        message = senderWindow->getMsg(seq);
+        senderWindow->advanceSendingPointer();
     }
     else
     {
-        //Sending and Receiving Logic
-        if(imSender)
-        {
-            DataMessage * message;
-            if(!msg->isSelfMessage())
-            {
-                message = check_and_cast<DataMessage*>(msg);
-                senderWindow->moveLowerEdge(message);
-                cout<<"done"<<endl;
-                int seq = message->getSeqNum();
-                if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
-                {
-                    cancelEvent(timers[seq]);
-                }
-//                cancelAndDelete(msg);
-            }
-            else
-            {
-                if(msg->getKind()==processTime)
-                {
-                    int seq = senderWindow->nextSeqNumToSend();
-                    message = senderWindow->getMsg(seq);
-                    if(msg->getName()[0]!='\0')
-                    {
-                        message = senderWindow->getMsg(atoi(msg->getName()));
-                    }
-                    cout<<seq<<endl;
-                    int prefix = message->getKind();
-                    bool delay = prefix & 0b0001;
-//                    bool dup = prefix & 0b0010;
-                    bool loss = prefix & 0b0100;
-                    bool mod = prefix & 0b1000;
-                    double delayValue = TD;
-                    if(!loss)
-                    {
-                        if(delay)
-                        {
-                            delayValue+=ED;
-                        }
-//                        cout<<msg->getName()<<"===========";
-//                        if(msg->getName()[0]!='\0')
-//                        {
-//                            message = senderWindow->getMsg(atoi(msg->getName()));
-//                        }
-                        message = new DataMessage(*message);
-                        if(mod)
-                        {
-                            string temp = message->getPayloadWithFraming();
-                            temp[1] = char(temp[1]^4);
-                            message->setPayload(temp);
-                        }
-                        sendDelayed(message,delayValue,"outNode");
-                    }
-                    if(msg->getName()[0]=='\0')
-                    {
-                        senderWindow->advanceSendingPointer();
-                    }
-                    // Log 2
-                    if(msg->getName()[0]!='\0')
-                    {
-                        cancelAndDelete(msg);
-                        return;
-                    }
-//                    cancelAndDelete(msg);
-                }
-
-                if (msg->getKind() == timeout)
-                {
-                    is_timeout = true;
-                    senderWindow->resetSendingPointer();
-                    for (int i = 0; i <= WS; ++i)
-                    {
-                        if(timers[i]->isScheduled())
-                        {
-                            cancelEvent(timers[i]);
-                        }
-                    }
-                    int seq = senderWindow->nextSeqNumToSend();
-                    senderWindow->getMsg(seq)->setKind(0);
-                    //CLEAR KIND, DISABLE TIMERS, RESET SENDING POINTER
-
-                }
-                int seq = senderWindow->nextSeqNumToSend();
-                if(seq!=-1)
-                {
-                    // Log 3 with if condition
-                    message = senderWindow->getMsg(seq);
-                    int prefix = message->getKind();
-                    bool dup = prefix & 0b0010;
-                    if(dup)
-                    {
-                        scheduleAt(simTime() + PT + DD, new cMessage(to_string(seq).c_str(),processTime));
-                    }
-                    scheduleAt(simTime() + PT, new cMessage("",processTime));
-                    // Log 1
-                    if(timers[(seq + 1) % (WS + 1)]->isScheduled())
-                    {
-                        cancelEvent(timers[(seq + 1) % (WS + 1)]);
-                    }
-                    scheduleAt(simTime() + TO, timers[(seq + 1) % (WS + 1)]);
-                }
-            }
-        }
-        else
-        {
-            DataMessage * message = check_and_cast<DataMessage*>(msg);
-//            cout<<"Message after framing with error: " << message->getPayloadWithFraming()<<endl;
-//            cout<<"Message is Valid? after error in bit 0: " << message->isValid()<<endl;
-            if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
-            {
-                frameExpected = (frameExpected + 1) % (WS + 1);
-                message = new DataMessage(frameExpected,FrameType::Ack);
-            }
-            else
-            {
-                message = new DataMessage(frameExpected,FrameType::Nack);//nack here
-            }
-//            cout << "Response Frame Type: "<< message->getFrameType()<<endl;
-//            cout << "Response Sequence Number: "<< message->getSeqNum()<<endl;
-            send(message, "outNode");
-            // Log 4
-        }
+        isSecondDuplicate = true;
+        message = senderWindow->getMsg(atoi(msg->getName()));
+        cancelAndDelete(msg);
     }
-    if (!is_timeout)
+    int prefix = message->getKind();
+    bool delay = prefix & 0b0001;
+    bool loss = prefix & 0b0100;
+    bool mod = prefix & 0b1000;
+    double delayValue = TD + (delay ? ED : 0);
+    // Log 2
+    if (!loss)
+    {
+        message = new DataMessage(*message);
+        if(mod)
+        {
+            string temp = message->getPayloadWithFraming();
+            temp[1] = char(temp[1]^4); //Add randomness?
+            message->setPayload(temp);
+        }
+        sendDelayed(message,delayValue,"outNode");
+    }
+    return isSecondDuplicate;
+}
+
+void Node::scheduleNextMessage(cMessage *msg)
+{
+    int seq = senderWindow->nextSeqNumToSend();
+    if (msg->getKind() == timeout)
+    {
+        senderWindow->resetSendingPointer();
+        for (int seqNum = 0; seqNum <= WS; ++seqNum)
+        {
+            if(timers[seqNum] == msg)
+            {
+                // Log 3
+            }
+            if(timers[seqNum]->isScheduled())
+            {
+                cancelEvent(timers[seqNum]);
+            }
+        }
+        seq = senderWindow->nextSeqNumToSend();
+        senderWindow->getMsg(seq)->setKind(0);
+    }
+    if(seq!=-1)
+    {
+        DataMessage* message = senderWindow->getMsg(seq);
+        int prefix = message->getKind();
+        bool dup = prefix & 0b0010;
+        if(dup)
+        {
+            scheduleAt(simTime() + PT + DD, new cMessage(to_string(seq).c_str(),processTime));
+        }
+        scheduleAt(simTime() + PT, new cMessage("",processTime));
+        if(timers[(seq + 1) % (WS + 1)]->isScheduled())
+        {
+            cancelEvent(timers[(seq + 1) % (WS + 1)]);
+        }
+        scheduleAt(simTime() + TO, timers[(seq + 1) % (WS + 1)]);
+        // Log 1
+    }
+
+    if (msg->getKind() != timeout)
     {
         cancelAndDelete(msg);
+    }
+}
+
+void Node::senderLogic(cMessage *msg)
+{
+    if(msg->isSelfMessage()) //Check if the message is a control message
+    {
+        if(msg->getKind()==processTime)
+        {
+            if (senderProcessMessage(msg))
+            {
+                return;
+            }
+        }
+        scheduleNextMessage(msg);
+        return;
+    }
+    //If the message is from the receiver (Ack or Nack)
+    DataMessage* message = check_and_cast<DataMessage*>(msg);
+    senderWindow->moveLowerEdge(message);
+    int seq = message->getSeqNum();
+    if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
+    {
+        cancelEvent(timers[seq]);
+    }
+    cancelAndDelete(msg);
+}
+
+void Node::receiverLogic(cMessage *msg)
+{
+    DataMessage * message = check_and_cast<DataMessage*>(msg);
+    if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
+    {
+        frameExpected = (frameExpected + 1) % (WS + 1);
+        message = new DataMessage(frameExpected,FrameType::Ack);
+    }
+    else
+    {
+        message = new DataMessage(frameExpected,FrameType::Nack);//nack here
+    }
+    send(message, "outNode");
+    // Log 4
+    cancelAndDelete(msg);
+}
+
+void Node::handleMessage(cMessage *msg)
+{
+    // TODO - Generated method body
+    if(isInit)
+    {
+        initializeRoutine(msg);
+        return;
+    }
+    //Sending and Receiving Logic
+    if(imSender)
+    {
+        senderLogic(msg);
+    }
+    else
+    {
+        receiverLogic(msg);
     }
 }
 

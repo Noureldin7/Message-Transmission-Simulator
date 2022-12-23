@@ -50,6 +50,11 @@ class Node : public cSimpleModule
     cMessage ** timers;  // kind = 1 for timeout timer 2 for processing time
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
+    virtual void initializeRoutine(cMessage *msg);
+    virtual bool senderProcessMessage(cMessage *msg);
+    virtual void scheduleNextMessage(cMessage *msg);
+    virtual void senderLogic(cMessage *msg);
+    virtual void receiverLogic(cMessage *msg);
 };
 
 #endif
