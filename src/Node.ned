@@ -19,6 +19,7 @@ simple Node
 {
     parameters:
         string Index;
+        volatile double random = uniform(0, 1);
     gates:
         input inCoord;
         input inNode;
