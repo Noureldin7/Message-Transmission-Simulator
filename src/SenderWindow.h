@@ -27,7 +27,6 @@ private:
 
 
 public:
-    void init(int WS, string filepath);
     DataMessage * getMsg(int seqNum);
     void moveLowerEdge(DataMessage * msg);
     int nextSeqNumToSend();

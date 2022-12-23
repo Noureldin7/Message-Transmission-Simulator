@@ -27,26 +27,6 @@ SenderWindow::SenderWindow(int WS, string filepath) {
     messages[MAX_SEQ] = NULL;
 }
 
-//void SenderWindow::init(int WS,string filepath)
-//{
-//    lowerEdge = 0;
-//    upperEdge = 0;
-//    toBeSent = 0;
-//    MAX_SEQ = WS + 1;
-//    messages = new DataMessage * [WS + 1];
-//    file.open(filepath,ifstream::in);
-//    string line;
-//    for (int i = 0; i <= WS; i++)
-//    {
-//        if(!getline(file,line))
-//        {
-//            messages[i] = NULL;
-//            continue;
-//        }
-//        messages[i] = new DataMessage(line.c_str(), 0);
-//    }
-//}
-
 DataMessage * SenderWindow::getMsg(int seqNum)
 {
     if(seqNum==-1)
@@ -63,10 +43,6 @@ void SenderWindow::resetSendingPointer()
 
 int SenderWindow::nextSeqNumToSend()
 {
-    if(lowerEdge == upperEdge) // Check
-    {
-        return -1;
-    }
     return toBeSent==upperEdge?-1:toBeSent;
 }
 
@@ -74,7 +50,7 @@ void SenderWindow::moveLowerEdge(DataMessage * msg)
 {
     if(msg->getFrameType()==FrameType::Ack)
     {
-        if(msg->getSeqNum()==lowerEdge)
+        if(msg->getSeqNum()==(lowerEdge + 1) % (MAX_SEQ + 1))
         {
             delete messages[lowerEdge];
             messages[lowerEdge]=NULL;
@@ -91,11 +67,6 @@ void SenderWindow::moveLowerEdge(DataMessage * msg)
 
 void SenderWindow::advanceSendingPointer()
 {
-//    if(toBeSent==upperEdge)
-//    {
-//        toBeSent = lowerEdge;
-//        toBeSent = lowerEdge;
-//    }
     if(toBeSent!=upperEdge)
     {
         toBeSent = (toBeSent + 1) % (MAX_SEQ + 1);

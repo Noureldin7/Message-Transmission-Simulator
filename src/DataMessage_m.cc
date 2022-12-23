@@ -207,6 +207,8 @@ DataMessage::DataMessage(int SeqNum, int Type) : ::omnetpp::cPacket(nullptr,0)
     this->parity = 0;
     this->frameType = Type;
     this->ackSeqNum = SeqNum;
+    this->setKind(2-Type); //Will display Green for Ack Red for Nack
+    this->setName(((Type==FrameType::Ack? "ACK ":"NACK ") + to_string(SeqNum)).c_str());
 }
 
 DataMessage::DataMessage(const DataMessage& other) : ::omnetpp::cPacket(other)

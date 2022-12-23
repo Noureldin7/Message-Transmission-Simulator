@@ -12,6 +12,7 @@
 #include <string>
 using std::string;
 using std::stoi;
+using std::to_string;
 // nedtool version check
 #define MSGC_VERSION 0x0506
 #if (MSGC_VERSION!=OMNETPP_VERSION)

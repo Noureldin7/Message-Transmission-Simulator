@@ -80,7 +80,7 @@ void Node::handleMessage(cMessage *msg)
                 senderWindow->moveLowerEdge(message);
                 cout<<"done"<<endl;
                 int seq = message->getSeqNum();
-                if(timers[seq]->isScheduled())
+                if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
                 {
                     cancelEvent(timers[seq]);
                 }
@@ -165,11 +165,11 @@ void Node::handleMessage(cMessage *msg)
                     }
                     scheduleAt(simTime() + PT, new cMessage("",processTime));
                     // Log 1
-                    if(timers[seq]->isScheduled())
+                    if(timers[(seq + 1) % (WS + 1)]->isScheduled())
                     {
-                        cancelEvent(timers[seq]);
+                        cancelEvent(timers[(seq + 1) % (WS + 1)]);
                     }
-                    scheduleAt(simTime() + TO, timers[seq]);
+                    scheduleAt(simTime() + TO, timers[(seq + 1) % (WS + 1)]);
                 }
             }
         }
@@ -180,12 +180,12 @@ void Node::handleMessage(cMessage *msg)
 //            cout<<"Message is Valid? after error in bit 0: " << message->isValid()<<endl;
             if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
             {
-                message = new DataMessage(message->getSeqNum(),FrameType::Ack);
                 frameExpected = (frameExpected + 1) % (WS + 1);
+                message = new DataMessage(frameExpected,FrameType::Ack);
             }
             else
             {
-                message = new DataMessage(message->getSeqNum(),FrameType::Nack);//nack here
+                message = new DataMessage(frameExpected,FrameType::Nack);//nack here
             }
 //            cout << "Response Frame Type: "<< message->getFrameType()<<endl;
 //            cout << "Response Sequence Number: "<< message->getSeqNum()<<endl;
