@@ -155,6 +155,11 @@ bool Node::senderProcessMessage(cMessage *msg)
         }
         sendDelayed(message,delayValue,"outNode");
     }
+    if(timers[(seq + 1) % (WS + 1)]->isScheduled())
+    {
+        cancelEvent(timers[(seq + 1) % (WS + 1)]);
+    }
+    scheduleAt(simTime() + TO, timers[(seq + 1) % (WS + 1)]);
     return isSecondDuplicate;
 }
 
@@ -191,11 +196,6 @@ void Node::scheduleNextMessage(cMessage *msg)
             scheduleAt(simTime() + PT + DD, new cMessage(to_string(seq).c_str(), TimerType::duplicateProcessTime));
         }
         scheduleAt(simTime() + PT, new cMessage(to_string(seq).c_str(),TimerType::processTime));
-        if(timers[(seq + 1) % (WS + 1)]->isScheduled())
-        {
-            cancelEvent(timers[(seq + 1) % (WS + 1)]);
-        }
-        scheduleAt(simTime() + TO, timers[(seq + 1) % (WS + 1)]);
         senderWindow->advanceSendingPointer();
         // Log 1
         string logMessage = constructLog1Message(prefix);
@@ -214,9 +214,6 @@ void Node::senderLogic(cMessage *msg)
     if (!msg->isSelfMessage()) //If the message is from the receiver (Ack or Nack)
     {
         DataMessage* message = check_and_cast<DataMessage*>(msg);
-        // // TODO: Log 2 Stupid, Declaring reception of ACK/NACK can be done is so many better ways
-        // string logMessage = constructLog2Message(false , message->getSeqNum(), message->getPayloadWithFraming(), message->getParity(), -1, 0, false);
-        // cout << logMessage;
         senderWindow->moveLowerEdge(message);
         int seq = message->getSeqNum();
         if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
@@ -242,12 +239,6 @@ void Node::receiverLogic(cMessage *msg)
 {
     if (!msg->isSelfMessage()) //If message is from sender
     {
-        // //Log 2
-        // DataMessage* message = check_and_cast<DataMessage*>(msg);
-        // int prefix = message->getKind();
-        // //TODO: Second Duplicate???
-        // string logMessage = constructLog2Message(false , message->getSeqNum(), message->getPayloadWithFraming(), message->getParity(), message->isValid(), prefix, (prefix & 0b0010));
-        // cout << logMessage;
         scheduleAt(simTime() + PT, msg); //reschedule
         return;
     }
@@ -255,31 +246,32 @@ void Node::receiverLogic(cMessage *msg)
     DataMessage * message = check_and_cast<DataMessage*>(msg);
     //bool isLost = (par("random").doubleValue() <= LP); //TODO: Add randomness (random <= Probabilty)
     bool isLost = false;
-    if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
+    if(message->getSeqNum() == frameExpected)
     {
-        // Log 4
-        frameExpected = (frameExpected + 1) % (WS + 1);
-        message = new DataMessage(frameExpected,FrameType::Ack);
-        string logMessage = constructLog4Message(FrameType::Ack, message->getSeqNum(), isLost);
+        string logMessage;
+        if (message->isValid()==-1)
+        {
+            frameExpected = (frameExpected + 1) % (WS + 1);
+            message = new DataMessage(frameExpected,FrameType::Ack);
+            // Log 4
+            logMessage = constructLog4Message(FrameType::Ack, message->getSeqNum(), isLost);
+        }
+        else
+        {
+            // Log 4
+            message = new DataMessage(frameExpected,FrameType::Nack);
+            logMessage = constructLog4Message(FrameType::Nack, message->getSeqNum(), isLost);
+        }
         cout << logMessage;
         outputFile << logMessage;
-    }
-    else
-    {
-        // Log 4
-        message = new DataMessage(frameExpected,FrameType::Nack);
-        string logMessage = constructLog4Message(FrameType::Nack, message->getSeqNum(), isLost);
-        cout << logMessage;
-        outputFile << logMessage;
-    }
-
-    if (isLost)
-    {
-        cancelAndDelete(message);
-    }
-    else
-    {
-        sendDelayed(message, TD, "outNode");
+        if (isLost)
+        {
+            cancelAndDelete(message);
+        }
+        else
+        {
+            sendDelayed(message, TD, "outNode");
+        }
     }
 
     cancelAndDelete(msg);
