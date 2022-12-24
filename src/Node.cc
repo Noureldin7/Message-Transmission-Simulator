@@ -240,34 +240,36 @@ void Node::receiverLogic(cMessage *msg)
     }
     //Send control frame
     DataMessage * message = check_and_cast<DataMessage*>(msg);
-    //bool isLost = (par("random").doubleValue() <= LP); //TODO: Add randomness (random <= Probabilty)
+    // bool isLost = (par("random").doubleValue() <= LP); //TODO: Add randomness (random <= Probabilty)
     bool isLost = false;
-    if(message->isValid()==-1 && message->getSeqNum() == frameExpected)
+    if(message->getSeqNum() == frameExpected)
     {
-        // Log 4
-        frameExpected = (frameExpected + 1) % WS;
-        message = new DataMessage(frameExpected,FrameType::Ack);
-        string logMessage = constructLog4Message(FrameType::Ack, message->getSeqNum(), isLost);
+        string logMessage;
+        if (message->isValid()==-1)
+        {
+            frameExpected = (frameExpected + 1) % WS;
+            message = new DataMessage(frameExpected,FrameType::Ack);
+            // Log 4
+            logMessage = constructLog4Message(FrameType::Ack, message->getSeqNum(), isLost);
+        }
+        else
+        {
+            // Log 4
+            message = new DataMessage(frameExpected,FrameType::Nack);
+            logMessage = constructLog4Message(FrameType::Nack, message->getSeqNum(), isLost);
+        }
         cout << logMessage;
         outputFile << logMessage;
-    }
-    else
-    {
-        // Log 4
-        message = new DataMessage(frameExpected,FrameType::Nack);
-        string logMessage = constructLog4Message(FrameType::Nack, message->getSeqNum(), isLost);
-        cout << logMessage;
-        outputFile << logMessage;
+        if (isLost)
+        {
+            cancelAndDelete(message);
+        }
+        else
+        {
+            sendDelayed(message, TD, "outNode");
+        }
     }
 
-    if (isLost)
-    {
-        cancelAndDelete(message);
-    }
-    else
-    {
-        sendDelayed(message, TD, "outNode");
-    }
 
     cancelAndDelete(msg);
 }
