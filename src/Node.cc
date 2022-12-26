@@ -47,11 +47,6 @@ void Node::initializeRoutine(cMessage *msg)
         string inputFilePath = "../texts/inputx.txt";
         inputFilePath[14] = index;
 
-        string filepath = "../texts/inputx.txt";
-        char index = par("Index").stringValue()[0];
-        filepath[14] = index;
-
-        senderWindow = new SenderWindow(WS,filepath);
         senderWindow = new SenderWindow(WS,inputFilePath);
         timers = new cMessage*[WS + 1];
         for (int i = 0; i <= WS; ++i)
@@ -216,7 +211,7 @@ void Node::senderLogic(cMessage *msg)
         DataMessage* message = check_and_cast<DataMessage*>(msg);
         senderWindow->moveLowerEdge(message);
         int seq = message->getSeqNum();
-        if(timers[seq]->isScheduled() && message->getFrameType() == FrameType::Ack)
+        if(timers[seq]->isScheduled())
         {
             cancelEvent(timers[seq]);
             message->setKind(0);
@@ -244,12 +239,12 @@ void Node::receiverLogic(cMessage *msg)
     }
     //Send control frame
     DataMessage * message = check_and_cast<DataMessage*>(msg);
-    //bool isLost = (par("random").doubleValue() <= LP); //TODO: Add randomness (random <= Probabilty)
-    bool isLost = false;
-    if(message->getSeqNum() == frameExpected)
+    bool isLost = (par("random").doubleValue() <= LP); //TODO: Add randomness (random <= Probabilty)
+//    bool isLost = false;
+    if(true)
     {
         string logMessage;
-        if (message->isValid()==-1)
+        if (message->isValid()==-1 && message->getSeqNum() == frameExpected)
         {
             frameExpected = (frameExpected + 1) % (WS + 1);
             message = new DataMessage(frameExpected,FrameType::Ack);

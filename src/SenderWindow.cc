@@ -48,21 +48,24 @@ int SenderWindow::nextSeqNumToSend()
 
 void SenderWindow::moveLowerEdge(DataMessage * msg)
 {
-    if(msg->getFrameType()==FrameType::Ack)
+//    if(msg->getFrameType()==FrameType::Ack)
+//    {
+    int tempSeq = msg->getSeqNum();
+    int tempLowerEdge = lowerEdge;
+    while(tempSeq!=tempLowerEdge)
     {
-        if(msg->getSeqNum()==(lowerEdge + 1) % (MAX_SEQ + 1))
+        tempSeq = (tempSeq + MAX_SEQ) % (MAX_SEQ + 1);
+        delete messages[tempSeq];
+        messages[tempSeq]=NULL;
+        lowerEdge = (lowerEdge + 1) % (MAX_SEQ + 1);
+        string line;
+        if(getline(file,line))
         {
-            delete messages[lowerEdge];
-            messages[lowerEdge]=NULL;
-            lowerEdge = (lowerEdge + 1) % (MAX_SEQ + 1);
-            string line;
-            if(getline(file,line))
-            {
-                messages[upperEdge] = new DataMessage(upperEdge,line.c_str()); //tbc
-                upperEdge = (upperEdge + 1) % (MAX_SEQ + 1);
-            }
+            messages[upperEdge] = new DataMessage(upperEdge,line.c_str()); //tbc
+            upperEdge = (upperEdge + 1) % (MAX_SEQ + 1);
         }
     }
+//    }
 }
 
 void SenderWindow::advanceSendingPointer()
