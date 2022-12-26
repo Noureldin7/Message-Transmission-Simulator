@@ -1,16 +1,3 @@
 0000 Hello
 0001 U There?
-0010 Plz Eat My Dick UwU
-0011 why are you gay?
-0100 Because
-0101 FUCK U!
 0110 Ok Bye
-0111 Ok Bye
-1000 Ok Bye
-1001 Ok Bye
-1010 Ok Bye
-1011 Ok Bye
-1100 Ok Bye
-1101 Ok Bye
-1110 Ok Bye
-1111 Ok Bye
