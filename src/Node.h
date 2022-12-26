@@ -44,6 +44,7 @@ class Node : public cSimpleModule
     int isInit;
     int frameExpected;
     int WS;
+    int lostFrame;
     double TO;
     double PT;
     double TD;

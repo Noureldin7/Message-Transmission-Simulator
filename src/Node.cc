@@ -24,6 +24,7 @@ void Node::initialize()
     frameExpected = 0;
     senderWindow = NULL;
     timers = NULL;
+    lostFrame = -1;
     WS = getParentModule()->par("WS").intValue();
     TO = getParentModule()->par("TO").doubleValue();
     PT = getParentModule()->par("PT").doubleValue();
@@ -240,15 +241,29 @@ void Node::receiverLogic(cMessage *msg)
     }
     //Send control frame
     DataMessage * message = check_and_cast<DataMessage*>(msg);
-    // bool isLost = (par("random").doubleValue() <= LP); //TODO: Add randomness (random <= Probabilty)
-    bool isLost = false;
-    if(message->getSeqNum() == frameExpected)
+     bool isLost = (par("random").doubleValue() <= LP); //TODO: Add randomness (random <= Probabilty)
+//    bool isLost = false;
+    int prevSeq = message->getSeqNum();
+    bool wrongFrame = message->getSeqNum()==lostFrame;
+    if((message->getSeqNum() == frameExpected) || wrongFrame )
     {
         string logMessage;
         if (message->isValid()==-1)
         {
-            frameExpected = (frameExpected + 1) % WS;
-            message = new DataMessage(frameExpected,FrameType::Ack);
+            if(!wrongFrame)
+            {
+                frameExpected = (frameExpected + 1) % WS;
+                message = new DataMessage(frameExpected,FrameType::Ack);
+            }
+            else
+            {
+                lostFrame = (lostFrame + 1) % WS;
+                message = new DataMessage(lostFrame,FrameType::Ack);
+                if(lostFrame == frameExpected)
+                {
+                    lostFrame = -1;
+                }
+            }
             // Log 4
             logMessage = constructLog4Message(FrameType::Ack, message->getSeqNum(), isLost);
         }
@@ -260,8 +275,9 @@ void Node::receiverLogic(cMessage *msg)
         }
         cout << logMessage;
         outputFile << logMessage;
-        if (isLost)
+        if (isLost && lostFrame == -1)
         {
+            lostFrame = prevSeq;
             cancelAndDelete(message);
         }
         else
