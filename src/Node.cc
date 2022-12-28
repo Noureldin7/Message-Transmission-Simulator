@@ -124,7 +124,7 @@ bool Node::senderProcessMessage(cMessage *msg)
     int seq = atoi(msg->getName());
     DataMessage* message = senderWindow->getMsg(seq);
     bool isSecondDuplicate = false;
-    if(msg->getKind() == TimerType::duplicateProcessTime) //if the message is not a second duplicate
+    if(msg->getKind() == TimerType::duplicateProcessTime) //if the message is a second duplicate
     {
         isSecondDuplicate = true;
         cancelAndDelete(msg);
@@ -150,11 +150,14 @@ bool Node::senderProcessMessage(cMessage *msg)
         }
         sendDelayed(message,delayValue,"outNode");
     }
-    if(timers[(seq + 1) % (WS + 1)]->isScheduled())
+    if (!isSecondDuplicate)
     {
-        cancelEvent(timers[(seq + 1) % (WS + 1)]);
+        if(timers[(seq + 1) % (WS + 1)]->isScheduled())
+        {
+            cancelEvent(timers[(seq + 1) % (WS + 1)]);
+        }
+        scheduleAt(simTime() + TO, timers[(seq + 1) % (WS + 1)]);
     }
-    scheduleAt(simTime() + TO, timers[(seq + 1) % (WS + 1)]);
     return isSecondDuplicate;
 }
 
@@ -223,7 +226,7 @@ void Node::senderLogic(cMessage *msg)
         }
     }
     //The message is a timing control message
-    if(msg->isSelfMessage() && msg->getKind()==TimerType::processTime && senderProcessMessage(msg))
+    if(msg->isSelfMessage() && (msg->getKind()==TimerType::processTime || msg->getKind()==TimerType::duplicateProcessTime) && senderProcessMessage(msg))
     {
         return;
     }
